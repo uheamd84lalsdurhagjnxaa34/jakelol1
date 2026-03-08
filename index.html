@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Suggestions Poll</title>
+
+<!-- Google Fonts VT323 -->
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+<style>
+body {
+  font-family: 'VT323', monospace;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.poll-container {
+  background: #000;
+  border: 3px solid #fff;
+  border-radius: 20px;
+  padding: 30px 50px;
+  text-align: center;
+  box-shadow: 0 0 20px 5px #fff;
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 10px 2px #fff; }
+  to { box-shadow: 0 0 30px 10px #fff; }
+}
+
+.poll-title {
+  color: #fff;
+  font-family: 'VT323', monospace;
+  font-size: 36px;
+  text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #fff;
+  margin-bottom: 30px;
+}
+
+.poll-button {
+  display: block;
+  width: 250px;
+  padding: 15px;
+  margin: 10px auto;
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  font-size: 24px;
+  font-family: 'VT323', monospace; /* MATCH FONT */
+  cursor: pointer;
+  transition: 0.3s;
+  text-shadow: 0 0 5px #fff;
+  box-shadow: 0 0 10px #fff;
+}
+
+.poll-button:hover {
+  box-shadow: 0 0 20px #fff;
+}
+
+.poll-button.voted {
+  background: #555;
+  cursor: default;
+  box-shadow: 0 0 5px #888 inset;
+}
+
+.poll-results {
+  margin-top: 20px;
+  color: #fff;
+  font-size: 20px;
+  font-family: 'VT323', monospace; /* MATCH FONT */
+}
+</style>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDOko10BdyY_cAm_gLKtwGagyOtxfluX1k",
+  authDomain: "poll-c5daa.firebaseapp.com",
+  projectId: "poll-c5daa",
+  storageBucket: "poll-c5daa.firebasestorage.app",
+  messagingSenderId: "973589530087",
+  appId: "1:973589530087:web:43386033b4aa704d9f6942"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const pollRef = doc(db, "polls", "suggestionsPoll");
+const options = ["More Apps", "More Games", "More Movies", "More Music"];
+
+let votedOption = localStorage.getItem('suggestionPollVoted');
+
+window.vote = async function(option) {
+  if (votedOption) return;
+
+  await runTransaction(db, async (transaction) => {
+    const docSnap = await transaction.get(pollRef);
+    let data = docSnap.exists() ? docSnap.data() : {};
+    if (!data[option]) data[option] = 0;
+    data[option] += 1;
+    transaction.set(pollRef, data);
+  });
+
+  localStorage.setItem('suggestionPollVoted', option);
+  votedOption = option;
+  updateButtons();
+}
+
+function updateButtons(data = null) {
+  options.forEach(opt => {
+    const btn = document.getElementById(`btn-${opt}`);
+    if (votedOption) {
+      btn.classList.add('voted');
+      btn.disabled = true;
+    }
+  });
+
+  if (data) {
+    let resultsHTML = '';
+    options.forEach(opt => {
+      resultsHTML += `${opt}: ${data[opt] || 0} votes<br>`;
+    });
+    document.getElementById('results').innerHTML = resultsHTML;
+  }
+}
+
+onSnapshot(pollRef, (docSnap) => {
+  const data = docSnap.data();
+  updateButtons(data);
+});
+</script>
+
+</head>
+<body>
+<div class="poll-container">
+  <div class="poll-title">What Is Your Suggestions?</div>
+  <button class="poll-button" id="btn-More Apps" onclick="vote('More Apps')">More Apps</button>
+  <button class="poll-button" id="btn-More Games" onclick="vote('More Games')">More Games</button>
+  <button class="poll-button" id="btn-More Movies" onclick="vote('More Movies')">More Movies</button>
+  <button class="poll-button" id="btn-More Music" onclick="vote('More Music')">More Music</button>
+  <div class="poll-results" id="results">Loading results...</div>
+</div>
+</body>
+</html>
